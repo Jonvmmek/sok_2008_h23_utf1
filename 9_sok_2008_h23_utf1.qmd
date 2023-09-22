@@ -1,0 +1,202 @@
+---
+title: "Sok-2008 Utfordring 1"
+author: "9"
+format: pdf
+editor: visual
+---
+
+```{r}
+#| echo: false
+rm(list=ls()) 
+knitr::opts_chunk$set(warning =FALSE,message =FALSE)
+library(tidyverse)
+library(rjstat)
+library(httr)
+library(ggrepel)
+```
+
+```{r}
+#| echo: false
+
+url <- "https://data.ssb.no/api/v0/no/table/04544/"
+
+query <- '{
+  "query": [
+    {
+      "code": "Kjonn",
+      "selection": {
+        "filter": "item",
+        "values": [
+          "1",
+          "2"
+        ]
+      }
+    },
+    {
+      "code": "Yrkesstatus",
+      "selection": {
+        "filter": "item",
+        "values": [
+          "00"
+        ]
+      }
+    },
+    {
+      "code": "ContentsCode",
+      "selection": {
+        "filter": "item",
+        "values": [
+          "FaktiskArbeidstid"
+        ]
+      }
+    }
+  ],
+  "response": {
+    "format": "json-stat2"
+  }
+}'
+
+hent_indeks.tmp <- url %>%
+  POST(body = query, encode = "json")
+
+df <-  hent_indeks.tmp %>%
+  content("text") %>%
+  fromJSONstat() %>%
+  as_tibble()
+```
+
+### Utfordring 1.1
+
+*Statistisk Sentral Byrå (SSB) har [data](https://data.ssb.no/api/v0/no/table/04544/) (tabell 04544) som viser gjennomsnittlig antall arbeidstimer blant menn og kvinner i Norge. Bruk disse dataene for å vise **empiriske kjønnsforskjeller i valg av arbeidstimer for menn og kvinner**. Forklar dine empiriske observasjoner **ved bruk av økonomisk teori**. Din forklaring skal inneholde grafisk illustrasjon av teorien. NB: i denne oppgaven skal du fokusere på forskjeller mellom menn og kvinner.*
+
+```{r}
+df_menn <- df[1:27,]
+df_kvinner <- df[28:54,]
+df_menn$år <- as.numeric(as.character(df_menn$år))
+df_kvinner$år <- as.numeric(as.character(df_kvinner$år))
+```
+
+```{r}
+ggplot() + 
+  geom_line(data=df_menn, aes(x=år, y=value), color='blue') + 
+  geom_line(data=df_kvinner, aes(x=år, y=value), color='red') +
+       labs(x = 'År',
+       y = 'Arbeidstimer i uka',
+       title = 'Gjennomsnittlig arbeidstimer i uka 1996-2022',
+       subtitle = 'Rød linje = kvinner, blå linje = menn.') +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+Vi observerer en minking i arbeidstimer på menn, den generelle arbeidstiden i løpet av en uke har gått ned fra 39,5 til 36,1 timer i uken. Hos kvinner ser vi en økning i antall arbeidstimer i uken, som siden 1995 har økt fra 30,1 til 31 i 2022.
+
+Grunnen til disse forskjellene varierer, det har vært en en utjevning i både arbeidstilbudet og lønns-muligheter for kvinner, som har resultert i at det er flere kvinner i arbeid. Grunnen til at vi ikke ser en særlig økning i arbeidstimer i uken hos kvinner kan være at økningen i lønninger har gjort det unødvendig å jobbe mer da lønnsøkningene har vært over økningen i inflasjonen.
+
+Menn, som har gått ned i arbeidstimer over de siste 25 årene, kan også forklares av at utbytte per time på jobb har gått opp, de resterende timene som ikke har blitt utjevnet av kvinner viser til at økonomien til de fleste menn i jobb også har blitt bedre.
+
+```{r}
+women <- read.csv2("https://raw.githubusercontent.com/uit-sok-2008-h23/uit-sok-2008-h23.github.io/main/assets/women.csv")
+
+women_1 <- subset(women, select = c(1, 2, 3))
+
+women_2 <- subset(women, select = c(1, 2, 4))
+```
+
+```{r}
+ggplot() + 
+  geom_col(data=women_1, aes(x=tot_full_rate, y=fem_emp_rate_0_2), color='blue') +
+       labs(x = 'Antall Uker betalt foreldrepermisjon',
+       y = 'Antall % kvinner tilbake i arbeid',
+       title = 'Antall uker betalt foreldrepermsjon mot antall prosent kvinner tilbake i jobb',
+       subtitle = 'Tot_full_rate mot fem_emp_rate_0_2.') +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+*«Gunstige permisjonsordninger ved fødsel sikrer høy yrkesdeltakelse blant kvinner på lang sikt».*
+
+I denne figuren observerer vi prosentandelen kvinner med barn mellom 0 til 2 som har gått tilbake i jobb basert på antallet uker et land har støtteordningen 100% betalt foreldrepermisjon.
+
+Estland, Slovakia og Slovenia har de høyeste antall støttede uker, med hele 82 uker, eller 575 dager, i Estland som er nesten 1 1/2 år, er det naturlig at vi ser en veldig liten prosentandel kvinner som er tilbake i jobb innen de 2 første årene. Dette kan forklares av kulturelle og sosioøkonomiske verdier og forskjeller, noe som viser til at landet bruker mye av sitt statsbudsjett på å støtte opp og gjøre starten for nye familier stabilt.
+
+Andre kulturelle forskjeller kommer i forventingen av hva foreldrerollen i forskjellige land er, mange steder i Sør-Europa er det vanlig at unge voksne bor hjemme mye lengere enn i land i vest og Nord-Europa hvor selvstendighet er høyt verdsatt. Dette gjør at en av foreldrene sine roller danner seg som støtteapparatet både for de unge og de gamle i sin familie. Dette kan forklare hvorfor mange land med gode støtteordninger allikevel ikke ser en høy prosentandel kvinner ikke kommer tilbake på jobb innen de første årene.
+
+USA stikker seg ut med 0 uker. Kvinner som føder må ha et støtteapparat klart på forhånd, enten egenopptjent eller familiestøtte. Det er ikke rart at nesten 60% av kvinnene er tilbake i jobb de 2 første årene. Kulturen i USA baserer seg på frihet, derfor er det normalt at man i en større grad også skal klare seg selv, noe som kan forklare fraværet av sikkerhetsnett og støtteordninger.
+
+```{r}
+ggplot() + 
+  geom_col(data=women_2, aes(x=tot_full_rate, y=fem_emp_rate_6_14), color='blue') +
+       labs(x = 'Antall Uker betalt foreldrepermisjon',
+       y = 'Antall % kvinner tilbake i arbeid',
+       title = 'Antall uker betalt foreldrepermsjon mot antall prosent kvinner tilbake i jobb',
+       subtitle = 'Tot_full_rate mot fem_emp_rate_6_14.') +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+*Forklar hvorfor høy yrkesdeltakelse blant norske kvinner og høye barnetall er viktig for at den norske velferdsmodellen skal være økonomisk bærekraftig.*
+
+Høy yrkesdeltakelse blant kvinner er viktig for den Norske staten for å kunne fortsette å finansiere den Norske velferdsstaten. Jo flere personer som deltar i jobb i Norge jo flere personer er med å finansiere det velferdssystemene via skatt. Høye barnetall sikrer også den norske velferdsstaten i fremtiden da lave barnetall vil føre til en skjev fordeling og liten inntjening om gamle og pensjonister er i flertall i samfunnet.
+
+### Utfordring 1.2
+
+```{r}
+hlth_sha11_hf <- read_csv("https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/HLTH_SHA11_HF/?format=SDMX-CSV&lang=en&label=label_only", 
+    col_types = cols(DATAFLOW = col_skip(), 
+        freq = col_skip(), OBS_FLAG = col_skip()))
+```
+
+```{r}
+hlth_sha11_hf_2019 <- hlth_sha11_hf %>%
+ filter(TIME_PERIOD == 2019)
+
+hlth_sha11_hf_2019_pps <- hlth_sha11_hf_2019 %>%  
+  slice(2291:2788)
+
+hlth_sha11_hf_2019_che <- hlth_sha11_hf_2019 %>%  
+  slice(3266:3702)
+
+hlth_sha11_hf_2019_pps_hlt <- hlth_sha11_hf_2019_pps %>%
+  slice(352:392)
+
+hlth_sha11_hf_2019_pps_hlt <- hlth_sha11_hf_2019_pps_hlt[-c(2, 10, 12, 13, 17, 18, 22), ]
+
+hlth_sha11_hf_2019_che_hlt <- hlth_sha11_hf_2019_che %>%
+  slice(310:344)
+
+hlth_sha11_hf_2019_che_hlt <- hlth_sha11_hf_2019_che_hlt[-c(28), ]
+
+hlth <- hlth_sha11_hf_2019_che_hlt %>%
+  cbind(hlth_sha11_hf_2019_pps_hlt$OBS_VALUE)
+```
+
+```{r}
+names(hlth)[6] = "PPS"
+names(hlth)[7] = "CHE"
+```
+
+```{r}
+hlth %>%
+  ggplot(aes(x=CHE, y=PPS)) +
+  geom_point() +
+   labs(x = 'Egenandel i %',
+       y = 'Husholdningers kjøpekraft') +
+  geom_label_repel(aes(label = geo), size = 2)
+```
+
+*Forklar sammenhengen mellom variablene du ser i figuren og gjør også rede for om det er korrelasjon mellom variablene i dette datasettet.*
+
+Percentual share of total current health expenditure (CHE) på X-AKSEN forteller oss hvor mye av den totale helseregningen vi selv må betale, dersom en person i Danmark har et legebesøk som i utgangspunktet hadde kostet 1000 kroner, vil den bare koste 13,79 prosent av denne summen. (137,9 kr)
+
+På Y-AKSEN ser vi hvor mye husholdningene i landene inkludert hadde i kjøpekraft i 2019.
+
+Sammenhengen mellom variablene i datasettet er at en høy kjøpekraft fører til større egenandel om man antar at de med stor kjøpekraft betaler mindre i skatt, dette gjør at helsetjenesten i et land får mindre støtte og kan derfor bidra mindre med å dempe den endelige sykehusregningen.
+
+Forklar hvordan økt egenbetaling påvirker helsetjenesteforbruk og øker effektiviteten.
+
+Dersom en høyere egenandel innføres vil dette virke som en inngangsverdi eller som en blokade. Ved lav egenandel kan de fleste lett spasere inn på legekontoret for de minste ting, og derfor oppta tid og resurser for medisinske bagateller. Settes den for høyt vil man kunne se at helsetjenester blir så dyrt at den i en større grad ikke brukes, som kan ha utfall i at helsetjenester mister finansiering og blir eksponentielt dyrere. En god mellomting mellom lavt og høyt vil føre til en smalere flaskehals som vil filtrere ut de som strengt tatt ikke har behov for legehjelp for å løse sine helseproblemer.
+
+*Diskuter fordelingseffekter av økte egenandeler.*
+
+Økte egenandeler vil føre til større forskjeller i samfunnet, de som har stort behov for støtte fra staten for å kunne ta bruk av det norske helsevesenet vil i større grad ikke kunne ta det i bruk. For mange som har grei råd vil en heving av egenandelen føre til at det blir større terskel for å ta i bruk helsetjenester, dette kan føre til lavere trykk på den norske heletjenesten, men kan også føre til dårligere helse hos mange potensielle skatteytere.
+
+*Appendiks/erklæring om bruk av AI.*
+
+I denne oppgaven er det ikke brukt AI (kunstig intelligens) av noen form for å løse oppgavene.
